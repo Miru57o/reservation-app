@@ -1,0 +1,16 @@
+{% extends "reservations/base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<h2>{{ page_title }}</h2>
+<p><strong>{{ booking.name }}様</strong></p>
+<p>以下の内容で予約を受け付けました。</p>
+<ul>
+    <li>予約日時: {{ booking.date|date:"Y年n月j日" }} {{ booking.time_slot }}</li>
+    <li>予約受付時刻: {{ booking.booked_at|date:"Y年n月j日 H:i" }}</li>
+</ul>
+<p>
+    <a href="{% url 'reservations:calendar_page' %}" class="btn">カレンダーに戻る</a>
+</p>
+{% endblock %}

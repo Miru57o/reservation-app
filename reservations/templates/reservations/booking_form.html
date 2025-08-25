@@ -1,0 +1,30 @@
+{% extends "reservations/base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<h2>{{ page_title }}</h2>
+<p>以下の日時のスロットを予約します。お名前を入力してください。</p>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        {{ form.name.label_tag }}
+        {{ form.name }}
+        {% if form.name.errors %}
+        {% for error in form.name.errors %}
+        <p style="color: red;"><small>{{ error }}</small></p>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+    <p style="color: red;">{{ error }}</p>
+    {% endfor %}
+    {% endif %}
+
+    <button type="submit" class="btn">予約する</button>
+    <a href="{% url 'reservations:calendar_page' %}" class="btn btn-secondary" style="margin-left: 10px;">カレンダーに戻る</a>
+</form>
+{% endblock %}

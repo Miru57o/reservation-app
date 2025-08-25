@@ -1,0 +1,124 @@
+{% extends "reservations/base.html" %}
+
+{% block title %}予約カレンダー{% endblock %}
+
+{% block content %}
+<h2>予約カレンダー</h2>
+<div id="calendar"></div>
+
+<div id="timeSlotModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close-button"
+                onclick="document.getElementById('timeSlotModal').style.display='none'">&times;</span>
+            <h3 id="modalDate"></h3>
+        </div>
+        <div id="modalTimeSlots" style="padding-top: 15px;">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+        // Djangoビューから渡された予約可能な時間帯のリスト (JSON文字列として渡す)
+        var availableTimeSlots = JSON.parse('{{ available_time_slots_json|safe|default:"[]" }}');
+        // Djangoビューから渡された今日の日付 (ISO形式 YYYY-MM-DD)
+        var todayStr = '{{ today_iso|safe }}'; // YYYY-MM-DD形式
+        var today = new Date(todayStr + 'T00:00:00'); // 時間を補完してDateオブジェクトに
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            locale: 'ja', // 日本語表示
+            initialView: 'dayGridMonth', // 初期表示は月ビュー
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay' // ビュー切り替えボタン
+            },
+            events: "{% url 'reservations:bookings_json' %}", // 予約済みデータを取得するURL
+            selectable: true, // 日付選択を可能にする
+            dateClick: function (info) {
+                var clickedDate = info.date;
+                // クリックされた日付の0時0分0秒にする（時間情報を除去）
+                var normalizedClickedDate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate());
+
+                if (normalizedClickedDate < today) {
+                    alert('過去の日付は選択できません。');
+                    return;
+                }
+
+                document.getElementById('modalDate').innerText = clickedDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+                var timeSlotsContainer = document.getElementById('modalTimeSlots');
+                timeSlotsContainer.innerHTML = '<h4>予約可能な時間:</h4><ul></ul>'; // ulを先に作る
+                var ul = timeSlotsContainer.querySelector('ul');
+
+                var year = clickedDate.getFullYear();
+                var month = clickedDate.getMonth() + 1; // JavaScriptの月は0から始まるため+1
+                var day = clickedDate.getDate();
+
+                // カレンダーに表示されている予約イベントを取得
+                var currentEvents = calendar.getEvents();
+                var bookedSlotsForDay = currentEvents.filter(function (event) {
+                    var eventStart = new Date(event.start);
+                    return eventStart.getFullYear() === year &&
+                        (eventStart.getMonth() + 1) === month &&
+                        eventStart.getDate() === day;
+                }).map(function (event) {
+                    // extendedProps.time_slot があればそれを使う
+                    return event.extendedProps && event.extendedProps.time_slot ? event.extendedProps.time_slot : null;
+                }).filter(Boolean); // nullを除外
+
+                var hasAvailableSlots = false;
+                availableTimeSlots.forEach(function (slot) {
+                    var li = document.createElement('li');
+                    if (bookedSlotsForDay.includes(slot)) {
+                        li.textContent = slot + ' - 予約済み';
+                        li.className = 'booked-slot';
+                    } else {
+                        var link = document.createElement('a');
+                        // DjangoのURLリゾルバはJavaScript内では直接使えないため、文字列で組み立てる
+                        link.href = `/reservations/book/${year}/${month}/${day}/${slot}/`;
+                        link.textContent = slot + ' - 予約可';
+                        li.appendChild(link);
+                        hasAvailableSlots = true;
+                    }
+                    ul.appendChild(li);
+                });
+
+                if (!hasAvailableSlots && ul.children.length === availableTimeSlots.length) { // 全て予約済みの場合
+                    ul.innerHTML = '<li>この日の予約可能な時間帯は全て予約済みです。</li>';
+                } else if (availableTimeSlots.length === 0) {
+                    ul.innerHTML = '<li>設定されている予約可能な時間帯はありません。</li>';
+                }
+
+
+                document.getElementById('timeSlotModal').style.display = 'block';
+            },
+            eventTimeFormat: { // イベントの時刻表示形式
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false, // 午前/午後を表示しない
+                hour12: false    // 24時間表示
+            },
+            // 必要であれば、eventDidMountで各イベントのレンダリングをカスタマイズ
+            // eventDidMount: function(info) {
+            //     if (info.event.extendedProps.description) {
+            //         // ツールチップなどを表示
+            //     }
+            // }
+        });
+
+        calendar.render();
+
+        // モーダルの外側クリックで閉じる
+        var modal = document.getElementById('timeSlotModal');
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    });
+</script>
+{% endblock %}

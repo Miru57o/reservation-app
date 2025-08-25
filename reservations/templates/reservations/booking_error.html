@@ -1,0 +1,10 @@
+{% extends "reservations/base.html" %}
+
+{% block title %}予約エラー{% endblock %}
+
+{% block content %}
+<h2>予約エラー</h2>
+<p>{{ message }}</p>
+<p><a href="javascript:history.back()" class="btn btn-secondary">戻る</a></p>
+<p><a href="{% url 'reservations:calendar_page' %}" class="btn">カレンダーTOPへ</a></p>
+{% endblock %}
