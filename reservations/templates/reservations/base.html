@@ -67,6 +67,8 @@
             max-width: 450px;
             border-radius: 8px;
             text-align: left;
+            word-wrap: break-word;
+            /* 長い単語を折り返す設定を追加 */
         }
 
         .modal-header {
@@ -116,6 +118,39 @@
             background-color: #f8d7da;
             border: 1px solid #f5c6cb;
             border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                margin: 0;
+            }
+
+            .container {
+                width: 100%;
+                padding: 10px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+
+            /* FullCalendarのツールバーの文字サイズを調整 */
+            .fc .fc-toolbar-title {
+                font-size: 1.2em;
+            }
+
+            .fc .fc-button {
+                padding: 4px 8px;
+                font-size: 0.9em;
+            }
+
+            /* FullCalendarのリスト表示のスタイル調整 */
+            .fc-list-event-title a {
+                white-space: normal !important;
+                /* イベントタイトルが改行されるように */
+            }
         }
     </style>
     {% block extra_head %}{% endblock %}

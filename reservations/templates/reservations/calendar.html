@@ -42,142 +42,152 @@
         var todayStr = '{{ today_iso|safe }}';
         var today = new Date(todayStr + 'T00:00:00');
 
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            locale: 'ja',
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            events: "{% url 'reservations:bookings_json' %}",
-            selectable: true,
-            dateClick: function (info) {
-                var clickedDate = info.date;
-                var normalizedClickedDate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate());
+        // --- 修正箇所 ---
+        // カレンダーのオプションを返す関数を定義
+        function getCalendarOptions() {
+            var isMobile = window.innerWidth < 768;
+            return {
+                locale: 'ja',
+                initialView: isMobile ? 'listWeek' : 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: "{% url 'reservations:bookings_json' %}",
+                selectable: true,
+                dateClick: function (info) {
+                    var clickedDate = info.date;
+                    var normalizedClickedDate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate());
 
-                if (normalizedClickedDate < today) {
-                    alert('過去の日付は選択できません。');
-                    return;
-                }
-
-                document.getElementById('modalDate').innerText = clickedDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-                var timeSlotsContainer = document.getElementById('modalTimeSlots');
-                timeSlotsContainer.innerHTML = '<h4>予約可能な時間:</h4><ul></ul>';
-                var ul = timeSlotsContainer.querySelector('ul');
-
-                var year = clickedDate.getFullYear();
-                var month = clickedDate.getMonth() + 1;
-                var day = clickedDate.getDate();
-
-                var currentEvents = calendar.getEvents();
-                var bookedSlotsForDay = currentEvents.filter(function (event) {
-                    if (event.extendedProps.type !== 'booking') return false;
-                    var eventStart = new Date(event.start);
-                    return eventStart.getFullYear() === year &&
-                        (eventStart.getMonth() + 1) === month &&
-                        eventStart.getDate() === day;
-                }).map(function (event) {
-                    return event.extendedProps.time_slot;
-                }).filter(Boolean);
-
-                var hasAvailableSlots = false;
-                availableTimeSlots.forEach(function (slot) {
-                    var li = document.createElement('li');
-                    if (bookedSlotsForDay.includes(slot)) {
-                        li.textContent = slot + ' - 予約済み';
-                        li.className = 'booked-slot';
-                    } else {
-                        var link = document.createElement('a');
-                        link.href = `/book/${year}/${month}/${day}/${slot}/`;
-                        link.textContent = slot + ' - 予約可';
-                        li.appendChild(link);
-                        hasAvailableSlots = true;
+                    if (normalizedClickedDate < today) {
+                        alert('過去の日付は選択できません。');
+                        return;
                     }
-                    ul.appendChild(li);
-                });
 
-                if (!hasAvailableSlots && ul.children.length === availableTimeSlots.length) {
-                    ul.innerHTML = '<li>この日の予約可能な時間帯は全て予約済みです。</li>';
-                } else if (availableTimeSlots.length === 0) {
-                    ul.innerHTML = '<li>設定されている予約可能な時間帯はありません。</li>';
-                }
+                    document.getElementById('modalDate').innerText = clickedDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+                    var timeSlotsContainer = document.getElementById('modalTimeSlots');
+                    timeSlotsContainer.innerHTML = '<h4>予約可能な時間:</h4><ul></ul>';
+                    var ul = timeSlotsContainer.querySelector('ul');
 
-                document.getElementById('timeSlotModal').style.display = 'block';
-            },
-            eventClick: function (info) {
-                var event = info.event;
-                var props = event.extendedProps;
-                var modal = document.getElementById('eventDetailModal');
-                var titleEl = document.getElementById('eventDetailTitle');
-                var bodyEl = document.getElementById('eventDetailBody');
-                var footerEl = document.getElementById('eventDetailFooter');
+                    var year = clickedDate.getFullYear();
+                    var month = clickedDate.getMonth() + 1;
+                    var day = clickedDate.getDate();
 
-                bodyEl.innerHTML = '';
-                footerEl.innerHTML = '';
+                    var currentEvents = calendar.getEvents();
+                    var bookedSlotsForDay = currentEvents.filter(function (event) {
+                        if (event.extendedProps.type !== 'booking') return false;
+                        var eventStart = new Date(event.start);
+                        return eventStart.getFullYear() === year &&
+                            (eventStart.getMonth() + 1) === month &&
+                            eventStart.getDate() === day;
+                    }).map(function (event) {
+                        return event.extendedProps.time_slot;
+                    }).filter(Boolean);
 
-                if (props.type === 'booking') {
-                    // 予約イベントの場合
-                    titleEl.innerText = '予約詳細';
-                    var startTime = event.start.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
-                    bodyEl.innerHTML = `
-                        <p><strong>予約者名:</strong> ${event.title}</p>
-                        <p><strong>日時:</strong> ${event.start.toLocaleDateString('ja-JP')} ${startTime}</p>
-                    `;
+                    var hasAvailableSlots = false;
+                    availableTimeSlots.forEach(function (slot) {
+                        var li = document.createElement('li');
+                        if (bookedSlotsForDay.includes(slot)) {
+                            li.textContent = slot + ' - 予約済み';
+                            li.className = 'booked-slot';
+                        } else {
+                            var link = document.createElement('a');
+                            link.href = `/book/${year}/${month}/${day}/${slot}/`;
+                            link.textContent = slot + ' - 予約可';
+                            li.appendChild(link);
+                            hasAvailableSlots = true;
+                        }
+                        ul.appendChild(li);
+                    });
 
-                    var deleteButton = document.createElement('button');
-                    deleteButton.innerText = 'この予約を削除する';
-                    deleteButton.className = 'btn btn-danger'; // Bootstrap風クラス
-                    deleteButton.onclick = function () {
-                        if (confirm('本当にこの予約を削除しますか？')) {
-                            // CSRFトークンを取得
-                            var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+                    if (!hasAvailableSlots && ul.children.length === availableTimeSlots.length) {
+                        ul.innerHTML = '<li>この日の予約可能な時間帯は全て予約済みです。</li>';
+                    } else if (availableTimeSlots.length === 0) {
+                        ul.innerHTML = '<li>設定されている予約可能な時間帯はありません。</li>';
+                    }
 
-                            fetch(`/delete_booking/${event.id}/`, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': csrftoken,
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.status === 'success') {
-                                        alert(data.message);
-                                        event.remove(); // カレンダーからイベントを削除
-                                        modal.style.display = 'none';
-                                    } else {
-                                        alert('エラー: ' + data.message);
+                    document.getElementById('timeSlotModal').style.display = 'block';
+                },
+                eventClick: function (info) {
+                    var event = info.event;
+                    var props = event.extendedProps;
+                    var modal = document.getElementById('eventDetailModal');
+                    var titleEl = document.getElementById('eventDetailTitle');
+                    var bodyEl = document.getElementById('eventDetailBody');
+                    var footerEl = document.getElementById('eventDetailFooter');
+
+                    bodyEl.innerHTML = '';
+                    footerEl.innerHTML = '';
+
+                    if (props.type === 'booking') {
+                        titleEl.innerText = '予約詳細';
+                        var startTime = event.start.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        bodyEl.innerHTML = `
+                            <p><strong>予約者名:</strong> ${event.title}</p>
+                            <p><strong>日時:</strong> ${event.start.toLocaleDateString('ja-JP')} ${startTime}</p>
+                        `;
+
+                        var deleteButton = document.createElement('button');
+                        deleteButton.innerText = 'この予約を削除する';
+                        deleteButton.className = 'btn btn-danger';
+                        deleteButton.onclick = function () {
+                            if (confirm('本当にこの予約を削除しますか？')) {
+                                var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+                                fetch(`/delete_booking/${event.id}/`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRFToken': csrftoken,
+                                        'Content-Type': 'application/json'
                                     }
                                 })
-                                .catch(error => {
-                                    console.error('Error:', error);
-                                    alert('削除処理中にエラーが発生しました。');
-                                });
-                        }
-                    };
-                    footerEl.appendChild(deleteButton);
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.status === 'success') {
+                                            alert(data.message);
+                                            event.remove();
+                                            modal.style.display = 'none';
+                                        } else {
+                                            alert('エラー: ' + data.message);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        alert('削除処理中にエラーが発生しました。');
+                                    });
+                            }
+                        };
+                        footerEl.appendChild(deleteButton);
 
-                } else if (props.type === 'schedule') {
-                    // 全体スケジュールの場合
-                    titleEl.innerText = '全体スケジュール';
-                    bodyEl.innerHTML = `
-                        <p><strong>予定:</strong> ${event.title}</p>
-                        <p><strong>日付:</strong> ${event.start.toLocaleDateString('ja-JP')}</p>
-                    `;
-                }
+                    } else if (props.type === 'schedule') {
+                        titleEl.innerText = '全体スケジュール';
+                        bodyEl.innerHTML = `
+                            <p><strong>予定:</strong> ${event.title}</p>
+                            <p><strong>日付:</strong> ${event.start.toLocaleDateString('ja-JP')}</p>
+                            <p><strong>詳細:</strong> ${props.description || ''}</p>
+                        `;
+                    }
 
-                modal.style.display = 'block';
-            },
-            eventTimeFormat: {
-                hour: '2-digit',
-                minute: '2-digit',
-                meridiem: false,
-                hour12: false
-            },
-        });
+                    modal.style.display = 'block';
+                },
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    meridiem: false,
+                    hour12: false
+                },
+            };
+        }
 
+        var calendar = new FullCalendar.Calendar(calendarEl, getCalendarOptions());
         calendar.render();
+
+        // 画面のリサイズ時にカレンダーの表示を更新する処理を追加
+        window.addEventListener('resize', function () {
+            var newOptions = getCalendarOptions();
+            calendar.changeView(newOptions.initialView);
+            calendar.setOption('headerToolbar', newOptions.headerToolbar);
+        });
 
         // 全モーダル共通の閉じる処理
         var modals = document.querySelectorAll('.modal');
@@ -190,7 +200,6 @@
         });
     });
 </script>
-
 <style>
     .btn-danger {
         background-color: #dc3545;
