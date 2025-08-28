@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,13 +19,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-vc1sgx$-1@+$tk7o9b53z(zw32p_+x+g6p6$-ehy7av&u=kw4^'
+# Renderデプロイ用の設定 (↓ここを修正しました)
+#----------------------------------------------------------------
+# SECRET_KEYを環境変数から取得、なければ開発用のキーを使用
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-vc1sgx$-1@+$tk7o9b53z(zw32p_+x+g6p6$-ehy7av&u=kw4^')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUGも環境変数で制御（'RENDER' 環境変数がなければ True になる）
+DEBUG = 'RENDER' not in os.environ
 
 ALLOWED_HOSTS = []
+
+# Renderのホスト名を追加
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+#----------------------------------------------------------------
 
 
 # Application definition
