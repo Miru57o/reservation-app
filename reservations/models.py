@@ -14,3 +14,17 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.date.strftime('%Y-%m-%d')} {self.time_slot} - {self.name}"
+    
+class Schedule(models.Model):
+    """全体共有のスケジュールモデル"""
+    title = models.CharField(max_length=200, verbose_name='タイトル')
+    description = models.TextField(blank=True, verbose_name='説明') 
+    date= models.DateField(verbose_name='日付')
+
+    class Meta:
+        verbose_name = 'スケジュール'
+        verbose_name_plural = 'スケジュール一覧'
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.date.strftime('%Y-%m-%d')} - {self.title}"
